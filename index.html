@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="Decora.css">
+    <title>Genshin Personajes</title>
+</head>
+
+<body>
+
+    <header class="Encabezado">
+        <h1>Bienvenido al juego y buscador por API</h1>
+
+
+        <button onclick="logout()" class="BotonRegreso">Cerrar sesión</button>
+
+        <script>
+            // Si no existe usuario, vuelve al login
+            if (!localStorage.getItem("usuario")) {
+                window.location.href = "login.html";
+            }
+
+            function logout() {
+
+                localStorage.clear(); // borra todo
+                window.location.href = "login.html";
+            }
+        </script>
+    </header>
+
+
+
+    <div class="stars"></div>
+    <div class="stars2"></div>
+    <div class="stars3"></div>
+
+    <div class="Genshin">
+
+        <hr>
+        <div class="franja"></div>
+        <hr>
+
+        <div class="contenedor">
+
+
+            <h1>Buscador de Genshin Impact</h1>
+
+            <input type="text" id="busqueda" placeholder="Ej: Kaeya, Diluc, Hu-tao" class="Busqueda">
+            <button onclick="buscarPersonaje()" class="botoncito">Buscar</button>
+
+            <div id="resultado"></div>
+
+            <script>
+                async function buscarPersonaje() {
+                    const nombre = document.getElementById("busqueda").value.toLowerCase().trim();
+                    const contenedor = document.getElementById("resultado");
+                    contenedor.innerHTML = "Buscando...";
+
+                    if (!nombre) {
+                        contenedor.innerHTML = "Por favor, escribí un personaje:";
+                        return;
+                    }
+
+                    const base = "https://genshin.jmp.blue/characters/";
+
+                    const tipoImagen = "card";
+
+                    try {
+                        // Verifica
+                        const test = await fetch(base + nombre + "/list");
+                        if (!test.ok) {
+                            contenedor.innerHTML = "Personaje no encontrado.";
+                            return;
+                        }
+
+                        // Obtener la imagen
+                        const urlImagen = base + nombre + "/" + tipoImagen;
+
+                        contenedor.innerHTML = `
+                    <h3>${nombre.toUpperCase()}</h3>
+                    <img src="${urlImagen}" alt="${nombre}" style="width:150px; border-radius:10px; box-shadow:0 0 10px #d4af37;">
+                `;
+
+                    } catch (e) {
+                        contenedor.innerHTML = "Error al cargar datos.";
+                        console.error(e);
+                    }
+                }
+            </script>
+
+
+
+            <hr>
+            <div class="franja"></div>
+            <hr>
+
+
+            <h1>Buscaminas</h1>
+
+            <button id="toggleJuego" class="botoncito">Mostrar juego</button>
+
+            <div id="juegoContainer" class="oculto">
+
+
+
+
+                <div id="buscaminas">
+
+                    <script>
+                        function crearBuscaminas(filas = 10, columnas = 10, minas = 15) {
+                            const contenedor = document.getElementById("buscaminas");
+                            contenedor.innerHTML = "";
+
+                            const tablero = [];
+                            const botones = [];
+
+                            // Crear tablero vacío
+                            for (let f = 0; f < filas; f++) {
+                                tablero[f] = [];
+                                botones[f] = [];
+
+                                const fila = document.createElement("div");
+                                fila.className = "fila";
+
+                                for (let c = 0; c < columnas; c++) {
+                                    tablero[f][c] = { mina: false, revelada: false, numero: 0 };
+
+                                    const celda = document.createElement("div");
+                                    celda.className = "celda";
+                                    celda.dataset.f = f;
+                                    celda.dataset.c = c;
+
+                                    celda.addEventListener("click", () => revelar(f, c));
+
+                                    botones[f][c] = celda;
+                                    fila.appendChild(celda);
+                                }
+
+                                contenedor.appendChild(fila);
+                            }
+
+                            // Colocar minas aleatorias
+                            let colocadas = 0;
+                            while (colocadas < minas) {
+                                const f = Math.floor(Math.random() * filas);
+                                const c = Math.floor(Math.random() * columnas);
+
+                                if (!tablero[f][c].mina) {
+                                    tablero[f][c].mina = true;
+                                    colocadas++;
+                                }
+                            }
+
+                            // Calcular números
+                            const direcciones = [
+                                [-1, -1], [-1, 0], [-1, 1],
+                                [0, -1], [0, 1],
+                                [1, -1], [1, 0], [1, 1]
+                            ];
+
+                            for (let f = 0; f < filas; f++) {
+                                for (let c = 0; c < columnas; c++) {
+                                    if (tablero[f][c].mina) continue;
+
+                                    let cuenta = 0;
+                                    direcciones.forEach(([df, dc]) => {
+                                        const nf = f + df, nc = c + dc;
+                                        if (nf >= 0 && nf < filas && nc >= 0 && nc < columnas) {
+                                            if (tablero[nf][nc].mina) cuenta++;
+                                        }
+                                    });
+
+                                    tablero[f][c].numero = cuenta;
+                                }
+                            }
+
+                            // Revelar celdas
+                            function revelar(f, c) {
+                                const celda = tablero[f][c];
+                                const boton = botones[f][c];
+
+                                if (celda.revelada) return;
+                                celda.revelada = true;
+
+                                boton.classList.add("revelada");
+
+                                if (celda.mina) {
+                                    boton.classList.add("bomba");
+                                    boton.textContent = "💣";
+                                    alert("¡Perdiste!");
+                                    mostrarTodas();
+                                    return;
+                                }
+
+                                if (celda.numero > 0) {
+                                    boton.textContent = celda.numero;
+                                } else {
+                                    boton.textContent = "";
+
+                                    // Revelar vecinos automáticamente
+                                    direcciones.forEach(([df, dc]) => {
+                                        const nf = f + df, nc = c + dc;
+                                        if (nf >= 0 && nf < filas && nc >= 0 && nc < columnas) {
+                                            revelar(nf, nc);
+                                        }
+                                    });
+                                }
+                            }
+
+                            // Mostrar todo al perder
+                            function mostrarTodas() {
+                                for (let f = 0; f < filas; f++) {
+                                    for (let c = 0; c < columnas; c++) {
+                                        const celda = tablero[f][c];
+                                        const boton = botones[f][c];
+
+                                        if (celda.mina) {
+                                            boton.classList.add("bomba");
+                                            boton.textContent = "💣";
+                                        } else {
+                                            boton.classList.add("revelada");
+                                            if (celda.numero > 0) boton.textContent = celda.numero;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Llamar al juego al cargar
+                        window.onload = () => crearBuscaminas();
+                    </script>
+
+
+                </div>
+            </div>
+
+            <div class="terrible">
+
+
+
+                <script>
+                    const btn = document.getElementById("toggleJuego");
+                    const juego = document.getElementById("juegoContainer");
+
+                    btn.addEventListener("click", () => {
+                        if (juego.classList.contains("oculto")) {
+                            juego.classList.remove("oculto");
+                            juego.classList.add("visible");
+                            btn.textContent = "Ocultar juego";
+                        } else {
+                            juego.classList.remove("visible");
+                            juego.classList.add("oculto");
+                            btn.textContent = "Mostrar juego";
+                        }
+                    });
+
+                </script>
+
+
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>
